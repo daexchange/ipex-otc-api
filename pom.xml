@@ -4,7 +4,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>ipex-otc-api</artifactId>
-	<version>1.0.3</version>
+	<version>1.0.4</version>
     <parent>
         <groupId>ai.turbochain.ipex</groupId>
         <artifactId>ipex-parent</artifactId>
@@ -114,13 +114,13 @@
         <dependency>
             <groupId>ai.turbochain.ipex</groupId>
             <artifactId>ipex-exchange-core</artifactId>
-            <version>1.0.3</version>
+            <version>1.0.4</version>
         </dependency>
         
 		<dependency>
 			<groupId>ai.turbochain.ipex</groupId>
 			<artifactId>ipex-otc-core</artifactId>
-			<version>1.0.3</version>
+			<version>1.0.4</version>
 		</dependency>
 		<dependency>
 			<groupId>io.reactivex</groupId>

@@ -103,7 +103,7 @@ public class AdvertiseController extends BaseController {
     @RequestMapping(value = "create")
     @Transactional(rollbackFor = Exception.class)
     public MessageResult create(@Valid Advertise advertise, BindingResult bindingResult,
-                              //  @SessionAttribute(SESSION_MEMBER) AuthMember member,
+                                @SessionAttribute(SESSION_MEMBER) AuthMember member,
                                 @RequestParam(value = "pay[]") String[] pay, String jyPassword) throws Exception {
         MessageResult result = BindingResultUtil.validate(bindingResult);
         if (result != null) {
@@ -111,7 +111,7 @@ public class AdvertiseController extends BaseController {
         }
         Assert.notEmpty(pay, msService.getMessage("MISSING_PAY"));
         Assert.hasText(jyPassword, msService.getMessage("MISSING_JYPASSWORD"));
-        Member member1 = memberService.findOne(24l);
+        Member member1 = memberService.findOne(member.getId());
         Assert.isTrue(member1.getIdNumber() != null, msService.getMessage("NO_REALNAME"));
 //        if (allow == 1) {
             //allow是1的时候，必须是认证商家才能发布广告
@@ -128,7 +128,7 @@ public class AdvertiseController extends BaseController {
         advertise.setLevel(AdvertiseLevel.ORDINARY);
         advertise.setRemainAmount(advertise.getNumber());
         Member mb = new Member();
-        mb.setId(24l);
+        mb.setId(member.getId());
         advertise.setMember(mb);
         Advertise ad = advertiseService.saveAdvertise(advertise);
         if (ad != null) {
