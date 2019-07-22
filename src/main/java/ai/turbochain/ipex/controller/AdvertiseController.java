@@ -39,11 +39,10 @@ import ai.turbochain.ipex.constant.AdvertiseLevel;
 import ai.turbochain.ipex.constant.AdvertiseType;
 import ai.turbochain.ipex.constant.MemberLevelEnum;
 import ai.turbochain.ipex.constant.PageModel;
-import ai.turbochain.ipex.controller.BaseController;
 import ai.turbochain.ipex.entity.Advertise;
 import ai.turbochain.ipex.entity.Country;
 import ai.turbochain.ipex.entity.Member;
-import ai.turbochain.ipex.entity.MemberWallet;
+import ai.turbochain.ipex.entity.MemberLegalCurrencyWallet;
 import ai.turbochain.ipex.entity.OtcCoin;
 import ai.turbochain.ipex.entity.QAdvertise;
 import ai.turbochain.ipex.entity.transform.AuthMember;
@@ -57,8 +56,8 @@ import ai.turbochain.ipex.model.screen.AdvertiseScreen;
 import ai.turbochain.ipex.service.AdvertiseService;
 import ai.turbochain.ipex.service.CountryService;
 import ai.turbochain.ipex.service.LocaleMessageSourceService;
+import ai.turbochain.ipex.service.MemberLegalCurrencyWalletService;
 import ai.turbochain.ipex.service.MemberService;
-import ai.turbochain.ipex.service.MemberWalletService;
 import ai.turbochain.ipex.service.OtcCoinService;
 import ai.turbochain.ipex.util.BigDecimalUtils;
 import ai.turbochain.ipex.util.BindingResultUtil;
@@ -83,7 +82,7 @@ public class AdvertiseController extends BaseController {
     @Autowired
     private OtcCoinService otcCoinService;
     @Autowired
-    private MemberWalletService memberWalletService;
+    private MemberLegalCurrencyWalletService memberLegalCurrencyWalletService;
     @Autowired
     private CoinExchangeFactory coins;
     @Autowired
@@ -249,10 +248,10 @@ public class AdvertiseController extends BaseController {
         Assert.isTrue(advertise.getStatus().equals(AdvertiseControlStatus.PUT_OFF_SHELVES), msService.getMessage("PUT_ON_SHELVES_FAILED"));
         OtcCoin otcCoin = advertise.getCoin();
         if (advertise.getAdvertiseType().equals(AdvertiseType.SELL)) {
-            MemberWallet memberWallet = memberWalletService.findByOtcCoinAndMemberId(otcCoin, authMember.getId());
-            Assert.isTrue(compare(memberWallet.getBalance(), advertise.getNumber()), msService.getMessage("INSUFFICIENT_BALANCE"));
+        	MemberLegalCurrencyWallet memberLegalCurrencyWallet = memberLegalCurrencyWalletService.findByOtcCoinAndMemberId(otcCoin, authMember.getId());
+            Assert.isTrue(compare(memberLegalCurrencyWallet.getBalance(), advertise.getNumber()), msService.getMessage("INSUFFICIENT_BALANCE"));
             Assert.isTrue(advertise.getNumber().compareTo(otcCoin.getSellMinAmount()) >= 0, msService.getMessage("SELL_NUMBER_MIN") + otcCoin.getSellMinAmount());
-            MessageResult result = memberWalletService.freezeBalance(memberWallet, advertise.getNumber());
+            MessageResult result = memberLegalCurrencyWalletService.freezeBalance(memberLegalCurrencyWallet, advertise.getNumber());
             if (result.getCode() != 0) {
                 throw new InformationExpiredException("Information Expired");
             }
@@ -278,8 +277,8 @@ public class AdvertiseController extends BaseController {
         Assert.isTrue(advertise.getStatus().equals(AdvertiseControlStatus.PUT_ON_SHELVES), msService.getMessage("PUT_OFF_SHELVES_FAILED"));
         OtcCoin otcCoin = advertise.getCoin();
         if (advertise.getAdvertiseType().equals(AdvertiseType.SELL)) {
-            MemberWallet memberWallet = memberWalletService.findByOtcCoinAndMemberId(otcCoin, authMember.getId());
-            MessageResult result = memberWalletService.thawBalance(memberWallet, advertise.getRemainAmount());
+        	MemberLegalCurrencyWallet memberLegalCurrencyWallet = memberLegalCurrencyWalletService.findByOtcCoinAndMemberId(otcCoin, authMember.getId());
+            MessageResult result = memberLegalCurrencyWalletService.thawBalance(memberLegalCurrencyWallet, advertise.getRemainAmount());
             if (result.getCode() != 0) {
                 throw new InformationExpiredException("Information Expired");
             }
@@ -402,8 +401,8 @@ public class AdvertiseController extends BaseController {
     private void checkAmount(AdvertiseType advertiseType, Advertise advertise, OtcCoin otcCoin, Member member) {
         if (advertiseType.equals(AdvertiseType.SELL)) {
             Assert.isTrue(compare(advertise.getNumber(), otcCoin.getSellMinAmount()), msService.getMessage("SELL_NUMBER_MIN") + otcCoin.getSellMinAmount());
-            MemberWallet memberWallet = memberWalletService.findByOtcCoinAndMemberId(otcCoin, member.getId());
-            Assert.isTrue(compare(memberWallet.getBalance(), advertise.getNumber()), msService.getMessage("INSUFFICIENT_BALANCE"));
+            MemberLegalCurrencyWallet memberLegalCurrencyWallet = memberLegalCurrencyWalletService.findByOtcCoinAndMemberId(otcCoin, member.getId());
+            Assert.isTrue(compare(memberLegalCurrencyWallet.getBalance(), advertise.getNumber()), msService.getMessage("INSUFFICIENT_BALANCE"));
         } else {
             Assert.isTrue(compare(advertise.getNumber(), otcCoin.getBuyMinAmount()), msService.getMessage("BUY_NUMBER_MIN") + otcCoin.getBuyMinAmount());
         }
