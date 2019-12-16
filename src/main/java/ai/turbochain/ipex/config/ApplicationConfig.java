@@ -31,6 +31,8 @@ public class ApplicationConfig extends WebMvcConfigurerAdapter {
         config.setAllowCredentials(true);
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
+        //暴露哪些头部信息（因为跨域访问默认不能获取全部头部信息）
+        config.addExposedHeader("x-auth-token");
         source.registerCorsConfiguration("/**", config);
         FilterRegistrationBean bean = new FilterRegistrationBean(new CorsFilter(source));
         bean.setOrder(0);
@@ -73,9 +75,18 @@ public class ApplicationConfig extends WebMvcConfigurerAdapter {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new MemberInterceptor())
+        registry.addInterceptor(getMemberInterceptor())
                 .addPathPatterns("/**")
                 .excludePathPatterns("/coin/all","/advertise/create", "/advertise/excellent", "/advertise/page","/advertise/page-by-unit","/order/pre","/advertise/newest");
         super.addInterceptors(registry);
     }
+    
+    /**
+   	 * 这里需要先将限流拦截器入住，不然无法获取到拦截器中的redistemplate
+   	 * @return
+   	 */
+   	@Bean
+   	public MemberInterceptor getMemberInterceptor() {
+   		return new MemberInterceptor();
+   	}
 }
