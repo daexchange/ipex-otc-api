@@ -57,6 +57,17 @@ public class OtcAdvController extends BaseController {
     @Autowired
     private CoinExchangeFactory coins;
 
+    /**
+     * 法币交易广告查询
+     * @param pageNo
+     * @param pageSize
+     * @param unit
+     * @param advertiseType
+     * @param isCertified
+     * @return
+     * @throws SQLException
+     * @throws DataException
+     */
     @RequestMapping(value = "page-by-unit")
     public MessageResult queryPageAdvertiseByUnit(@RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
                                                   @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
