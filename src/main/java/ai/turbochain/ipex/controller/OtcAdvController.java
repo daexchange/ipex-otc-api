@@ -168,7 +168,13 @@ public class OtcAdvController extends BaseController {
         Order order = orderService.findOneByOrderSn(orderSn);
         notNull(order, msService.getMessage("ORDER_NOT_EXISTS"));
         MessageResult result = MessageResult.success();
+        RespDetail respDetail = new RespDetail();
+
         Member member = memberService.findOne(order.getMemberId());
+        Member memberCus = memberService.findOne(order.getCustomerId());
+        respDetail.setPublisher(member);
+        respDetail.setCustomer(memberCus);
+
         OrderDetail info = OrderDetail.builder().orderSn(orderSn)
                 .unit(order.getCoin().getUnit())
                 .status(order.getStatus())
@@ -225,13 +231,13 @@ public class OtcAdvController extends BaseController {
         } else {
             return MessageResult.error(msService.getMessage("ORDER_NOT_EXISTS"));
         }
-        Member publisher = memberService.findByUsername(order.getMemberName());
-        Member customer = memberService.findByUsername(order.getCustomerName());
+//        Member publisher = memberService.findByUsername(order.getMemberName());
+//        Member customer = memberService.findByUsername(order.getCustomerName());
 //        Member customer = memberService.findByUsername(order.getMemberName());
-        RespDetail respDetail = new RespDetail();
+//        RespDetail respDetail = new RespDetail();
         respDetail.setOrderDetail(info);
-        respDetail.setPublisher(publisher);
-        respDetail.setCustomer(customer);
+//        respDetail.setPublisher(publisher);
+//        respDetail.setCustomer(customer);
         result.setData(respDetail);
         return result;
     }
