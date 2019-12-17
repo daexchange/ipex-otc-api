@@ -121,7 +121,7 @@ public class OtcAdvController extends BaseController {
     /**
      * 我的订单
      *
-     * @param user
+     * @param
      * @param status
      * @param pageNo
      * @param pageSize
@@ -227,6 +227,7 @@ public class OtcAdvController extends BaseController {
         }
         Member publisher = memberService.findByUsername(order.getMemberName());
         Member customer = memberService.findByUsername(order.getCustomerName());
+//        Member customer = memberService.findByUsername(order.getMemberName());
         RespDetail respDetail = new RespDetail();
         respDetail.setOrderDetail(info);
         respDetail.setPublisher(publisher);
