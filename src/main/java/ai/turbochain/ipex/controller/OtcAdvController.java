@@ -156,6 +156,7 @@ public class OtcAdvController extends BaseController {
 
     /**
      * 订单详情
+     * 同时返回订单会员信息
      *
      * @param orderSn
      * @param user
@@ -223,7 +224,13 @@ public class OtcAdvController extends BaseController {
         } else {
             return MessageResult.error(msService.getMessage("ORDER_NOT_EXISTS"));
         }
-        result.setData(info);
+        Member publisher = memberService.findByUsername(order.getMemberName());
+        Member customer = memberService.findByUsername(order.getCustomerName());
+        RespDetail respDetail = new RespDetail();
+        respDetail.setOrderDetail(info);
+        respDetail.setPublisher(publisher);
+        respDetail.setCustomer(customer);
+        result.setData(respDetail);
         return result;
     }
 
