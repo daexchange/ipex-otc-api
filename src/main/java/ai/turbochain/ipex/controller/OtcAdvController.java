@@ -6,10 +6,7 @@ import ai.turbochain.ipex.constant.AdvertiseType;
 import ai.turbochain.ipex.constant.OrderStatus;
 import ai.turbochain.ipex.constant.PageModel;
 import ai.turbochain.ipex.entity.*;
-import ai.turbochain.ipex.entity.transform.AuthMember;
-import ai.turbochain.ipex.entity.transform.MemberAdvertiseInfo;
-import ai.turbochain.ipex.entity.transform.ScanAdvertise;
-import ai.turbochain.ipex.entity.transform.SpecialPage;
+import ai.turbochain.ipex.entity.transform.*;
 import ai.turbochain.ipex.model.screen.AdvertiseScreen;
 import ai.turbochain.ipex.pagination.PageResult;
 import ai.turbochain.ipex.service.*;
@@ -102,6 +99,21 @@ public class OtcAdvController extends BaseController {
     }
 
     /**
+     * 广告详情
+     *
+     * @param id
+     * @return
+     */
+    @RequestMapping(value = "adver/detail")
+    public MessageResult detail(Long id, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser) {
+        Advertise advertise = advertiseService.findOne(id);
+        advertise.setMarketPrice(coins.get(advertise.getCoinUnit()));
+        MessageResult result = MessageResult.success();
+        result.setData(advertise);
+        return result;
+    }
+
+    /**
      * 个人所有广告
      *
      * @param
@@ -163,7 +175,7 @@ public class OtcAdvController extends BaseController {
      * @param user
      * @return
      */
-    @RequestMapping(value = "detail")
+    @RequestMapping(value = "order/detail")
     public MessageResult queryOrder(String orderSn, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember user) {
         Order order = orderService.findOneByOrderSn(orderSn);
         notNull(order, msService.getMessage("ORDER_NOT_EXISTS"));
