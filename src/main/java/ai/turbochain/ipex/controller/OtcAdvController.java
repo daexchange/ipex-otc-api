@@ -7,14 +7,12 @@ import ai.turbochain.ipex.constant.OrderStatus;
 import ai.turbochain.ipex.constant.PageModel;
 import ai.turbochain.ipex.entity.*;
 import ai.turbochain.ipex.entity.transform.AuthMember;
+import ai.turbochain.ipex.entity.transform.MemberAdvertiseInfo;
 import ai.turbochain.ipex.entity.transform.ScanAdvertise;
 import ai.turbochain.ipex.entity.transform.SpecialPage;
 import ai.turbochain.ipex.model.screen.AdvertiseScreen;
 import ai.turbochain.ipex.pagination.PageResult;
-import ai.turbochain.ipex.service.AdvertiseService;
-import ai.turbochain.ipex.service.MemberService;
-import ai.turbochain.ipex.service.OrderService;
-import ai.turbochain.ipex.service.OtcCoinService;
+import ai.turbochain.ipex.service.*;
 import ai.turbochain.ipex.util.MessageResult;
 import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -23,16 +21,16 @@ import org.apache.catalina.servlet4preview.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.util.Assert;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.SessionAttribute;
+import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static ai.turbochain.ipex.constant.SysConstant.API_HARD_ID_MEMBER;
 import static ai.turbochain.ipex.constant.SysConstant.SESSION_MEMBER;
+import static org.springframework.util.Assert.notNull;
 
 /**
  * @author 未央
@@ -53,6 +51,9 @@ public class OtcAdvController extends BaseController {
 
     @Autowired
     private OtcCoinService otcCoinService;
+
+    @Autowired
+    private LocaleMessageSourceService msService;
 
     @Autowired
     private CoinExchangeFactory coins;
@@ -151,6 +152,97 @@ public class OtcAdvController extends BaseController {
         MessageResult result = MessageResult.success();
         result.setData(scanOrders);
         return result;
+    }
+
+    /**
+     * 订单详情
+     *
+     * @param orderSn
+     * @param user
+     * @return
+     */
+    @RequestMapping(value = "detail")
+    public MessageResult queryOrder(String orderSn, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember user) {
+        Order order = orderService.findOneByOrderSn(orderSn);
+        notNull(order, msService.getMessage("ORDER_NOT_EXISTS"));
+        MessageResult result = MessageResult.success();
+        Member member = memberService.findOne(order.getMemberId());
+        OrderDetail info = OrderDetail.builder().orderSn(orderSn)
+                .unit(order.getCoin().getUnit())
+                .status(order.getStatus())
+                .amount(order.getNumber())
+                .price(order.getPrice())
+                .money(order.getMoney())
+                .payTime(order.getPayTime())
+                .createTime(order.getCreateTime())
+                .timeLimit(order.getTimeLimit())
+                .myId(user.getId()).memberMobile(member.getMobilePhone())
+                .build();
+        /*if (!order.getStatus().equals(OrderStatus.CANCELLED)) {*/
+        PayInfo payInfo = PayInfo.builder()
+                .bankInfo(order.getBankInfo())
+                .alipay(order.getAlipay())
+                .wechatPay(order.getWechatPay())
+                .build();
+        info.setPayInfo(payInfo);
+        /* }*/
+        if (order.getMemberId().equals(user.getId())) {
+            info.setHisId(order.getCustomerId());
+            info.setOtherSide(order.getCustomerName());
+            info.setCommission(order.getCommission());
+            Member memberCustomer = memberService.findOne(order.getCustomerId());
+            info.setMemberMobile(memberCustomer.getMobilePhone());
+            if (order.getAdvertiseType().equals(AdvertiseType.BUY)) {
+                info.setType(AdvertiseType.BUY);
+                if (info.getPayInfo() != null) {
+                    info.getPayInfo().setRealName(order.getCustomerRealName());
+                }
+            } else {
+                info.setType(AdvertiseType.SELL);
+                if (info.getPayInfo() != null) {
+                    info.getPayInfo().setRealName(order.getMemberRealName());
+                }
+            }
+        } else if (order.getCustomerId().equals(user.getId())) {
+            info.setHisId(order.getMemberId());
+            info.setOtherSide(order.getMemberName());
+            info.setCommission(BigDecimal.ZERO);
+            Member memberOrder = memberService.findOne(order.getMemberId());
+            info.setMemberMobile(memberOrder.getMobilePhone());
+            if (order.getAdvertiseType().equals(AdvertiseType.BUY)) {
+                if (info.getPayInfo() != null) {
+                    info.getPayInfo().setRealName(order.getCustomerRealName());
+                }
+                info.setType(AdvertiseType.SELL);
+            } else {
+                if (info.getPayInfo() != null) {
+                    info.getPayInfo().setRealName(order.getMemberRealName());
+                }
+                info.setType(AdvertiseType.BUY);
+            }
+        } else {
+            return MessageResult.error(msService.getMessage("ORDER_NOT_EXISTS"));
+        }
+        result.setData(info);
+        return result;
+    }
+
+    /**
+     * 获取会员信息
+     * @param name
+     * @return
+     */
+    @RequestMapping(value = "member", method = RequestMethod.POST)
+    public MessageResult memberAdvertises(String name) {
+        Member member = memberService.findByUsername(name);
+        if (member != null) {
+            MemberAdvertiseInfo memberAdvertise = advertiseService.getMemberAdvertise(member, coins.getCoins());
+            MessageResult result = MessageResult.success();
+            result.setData(memberAdvertise);
+            return result;
+        } else {
+            return MessageResult.error(msService.getMessage("MEMBER_NOT_EXISTS"));
+        }
     }
 
 }
