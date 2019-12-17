@@ -60,6 +60,7 @@ public class OtcAdvController extends BaseController {
 
     /**
      * 法币交易广告查询
+     *
      * @param pageNo
      * @param pageSize
      * @param unit
@@ -90,8 +91,8 @@ public class OtcAdvController extends BaseController {
      * @return
      */
     @RequestMapping(value = "all")
-    public MessageResult allNormal(PageModel pageModel, HttpServletRequest request) {
-        BooleanExpression eq = QAdvertise.advertise.member.id.eq(88L).
+    public MessageResult allNormal(PageModel pageModel, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser, HttpServletRequest request) {
+        BooleanExpression eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).
                 and(QAdvertise.advertise.status.ne(AdvertiseControlStatus.TURNOFF));
         if (request.getParameter("status") != null) {
             eq.and(QAdvertise.advertise.status.eq(AdvertiseControlStatus.valueOf(request.getParameter("status"))));
@@ -236,6 +237,7 @@ public class OtcAdvController extends BaseController {
 
     /**
      * 获取会员信息
+     *
      * @param name
      * @return
      */
