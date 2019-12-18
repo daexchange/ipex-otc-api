@@ -158,7 +158,7 @@ public class HardIdAdvertiseController extends BaseController {
         advertise.setOrigin(MemberRegisterOriginEnum.HARDID.getSourceType());//代表来自应用HardId
         // 直接上架
         advertise.setStatus(AdvertiseControlStatus.PUT_ON_SHELVES);
-        advertise.setTimeLimit(120000000);//2000000小时
+        advertise.setTimeLimit(43200);//30天
         
         if (advertise.getAdvertiseType().equals(AdvertiseType.SELL)) {
         	MemberLegalCurrencyWallet memberLegalCurrencyWallet = memberLegalCurrencyWalletService.findByOtcCoinAndMemberId(otcCoin, user.getId());

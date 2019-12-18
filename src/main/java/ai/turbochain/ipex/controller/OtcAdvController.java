@@ -106,7 +106,8 @@ public class OtcAdvController extends BaseController {
      */
     @RequestMapping(value = "all")
     public MessageResult allNormal(PageModel pageModel, AdvertiseControlStatus status, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser, HttpServletRequest request) {
-        // BooleanExpression eq = null;
+    	Integer origin = 2;
+    	// BooleanExpression eq = null;
 
         // if (status==null) {
         //eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).and(QAdvertise.advertise.status.eq(AdvertiseControlStatus.TURNOFF));
@@ -114,7 +115,7 @@ public class OtcAdvController extends BaseController {
         //eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).and(QAdvertise.advertise.status.ne(AdvertiseControlStatus.TURNOFF));
         //  }
 
-        Page<Advertise> all = advertiseService.pageQuery(pageModel.getPageNo(), pageModel.getPageSize(), status, shiroUser.getId());
+        Page<Advertise> all = advertiseService.pageQuery(pageModel.getPageNo(), pageModel.getPageSize(), origin,status, shiroUser.getId());
         // Page<Advertise> all = advertiseService.findAll(predicate, pageModel.getPageable());
 
         return success(all);
