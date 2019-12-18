@@ -113,12 +113,12 @@ public class OtcAdvController extends BaseController {
         return result;
     }
 
-    /**
-     * 个人所有广告
-     *
-     * @param
-     * @return
-     */
+//    /**
+//     * 个人所有广告
+//     *
+//     * @param
+//     * @return
+//     */
 //    @RequestMapping(value = "self/all")
 //    public MessageResult self(
 //            AdvertiseScreen screen,
@@ -140,8 +140,8 @@ public class OtcAdvController extends BaseController {
      * @return
      */
     @RequestMapping(value = "self")
-    public MessageResult myOrder(OrderStatus status, int pageNo, int pageSize, String orderSn) {
-        Page<Order> page = orderService.pageQuery(pageNo, pageSize, status, 88L, orderSn);
+    public MessageResult myOrder(@SessionAttribute(API_HARD_ID_MEMBER) AuthMember user, OrderStatus status, int pageNo, int pageSize, String orderSn) {
+        Page<Order> page = orderService.pageQuery(pageNo, pageSize, status, user.getId(), orderSn);
         List<Long> memberIdList = new ArrayList<>();
         page.forEach(order -> {
             if (!memberIdList.contains(order.getMemberId())) {
@@ -154,7 +154,7 @@ public class OtcAdvController extends BaseController {
         List<BooleanExpression> booleanExpressionList = new ArrayList();
         booleanExpressionList.add(QMember.member.id.in(memberIdList));
         PageResult<Member> memberPage = memberService.queryWhereOrPage(booleanExpressionList, null, null);
-        Page<ScanOrder> scanOrders = page.map(x -> ScanOrder.toScanOrder(x, 88L));
+        Page<ScanOrder> scanOrders = page.map(x -> ScanOrder.toScanOrder(x, user.getId()));
         for (ScanOrder scanOrder : scanOrders) {
             for (Member member : memberPage.getContent()) {
                 if (scanOrder.getMemberId().equals(member.getId())) {
