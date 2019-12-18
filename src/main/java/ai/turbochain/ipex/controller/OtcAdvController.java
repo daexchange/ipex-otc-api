@@ -1,6 +1,7 @@
 package ai.turbochain.ipex.controller;
 
 import static ai.turbochain.ipex.constant.SysConstant.API_HARD_ID_MEMBER;
+import static ai.turbochain.ipex.constant.SysConstant.SESSION_MEMBER;
 import static org.springframework.util.Assert.notNull;
 
 import java.math.BigDecimal;
@@ -8,6 +9,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import ai.turbochain.ipex.constant.*;
+import com.alibaba.druid.sql.ast.statement.SQLIfStatement;
 import org.apache.catalina.servlet4preview.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -22,10 +25,6 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.sparkframework.sql.DataException;
 
 import ai.turbochain.ipex.coin.CoinExchangeFactory;
-import ai.turbochain.ipex.constant.AdvertiseControlStatus;
-import ai.turbochain.ipex.constant.AdvertiseType;
-import ai.turbochain.ipex.constant.OrderStatus;
-import ai.turbochain.ipex.constant.PageModel;
 import ai.turbochain.ipex.entity.Advertise;
 import ai.turbochain.ipex.entity.Member;
 import ai.turbochain.ipex.entity.Order;
@@ -106,17 +105,17 @@ public class OtcAdvController extends BaseController {
      * @return
      */
     @RequestMapping(value = "all")
-    public MessageResult allNormal(PageModel pageModel, AdvertiseControlStatus status,@SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser, HttpServletRequest request) {
-       // BooleanExpression eq = null;
-        
-       // if (status==null) {
-             //eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).and(QAdvertise.advertise.status.eq(AdvertiseControlStatus.TURNOFF));
-       // } else {
-        	//eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).and(QAdvertise.advertise.status.ne(AdvertiseControlStatus.TURNOFF));
-      //  }
-         
+    public MessageResult allNormal(PageModel pageModel, AdvertiseControlStatus status, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser, HttpServletRequest request) {
+        // BooleanExpression eq = null;
+
+        // if (status==null) {
+        //eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).and(QAdvertise.advertise.status.eq(AdvertiseControlStatus.TURNOFF));
+        // } else {
+        //eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).and(QAdvertise.advertise.status.ne(AdvertiseControlStatus.TURNOFF));
+        //  }
+
         Page<Advertise> all = advertiseService.pageQuery(pageModel.getPageNo(), pageModel.getPageSize(), status, shiroUser.getId());
-       // Page<Advertise> all = advertiseService.findAll(predicate, pageModel.getPageable());
+        // Page<Advertise> all = advertiseService.findAll(predicate, pageModel.getPageable());
 
         return success(all);
     }
@@ -155,6 +154,61 @@ public class OtcAdvController extends BaseController {
 //    }
 
     /**
+     * 根据订单状态查询我的订单
+     *
+     * @param user
+     * @param status
+     * [ 0：已取消 1：未付款 2：已付款  3：已完成 4：申诉中  5: 进行中 (1、2、4) ]
+     * @param pageNo
+     * @param pageSize
+     * @param orderSn
+     * @return
+     */
+    @RequestMapping(value = "self")
+    public MessageResult myAPPOrder(@SessionAttribute(API_HARD_ID_MEMBER) AuthMember user, Integer status, int pageNo, int pageSize, String orderSn){
+        if (status != 0 && status != 1 && status != 2 && status != 3 && status != 4 && status != 5) {
+            return MessageResult.error(500, "状态错误");
+        }
+
+        OrderStatus statusEnum = null;
+        OrderStatus statusEnum_1 = null;
+        OrderStatus statusEnum_2 = null;
+        OrderStatus statusEnum_4 = null;
+        if (status==5){
+            for (OrderStatus s : OrderStatus.values()) {
+                if (s.getOrdinal() == 1) {
+                    statusEnum_1 = s;
+                }else if (s.getOrdinal()==2){
+                    statusEnum_2 = s;
+                }else if (s.getOrdinal()==4){
+                    statusEnum_4 = s;
+                }
+            }
+            Page<ScanOrder> scanOrders_1 = myOrder(user, statusEnum_1, pageNo, pageSize, orderSn);
+            Page<ScanOrder> scanOrders_2 = myOrder(user, statusEnum_2, pageNo, pageSize, orderSn);
+            Page<ScanOrder> scanOrders_4 = myOrder(user, statusEnum_4, pageNo, pageSize, orderSn);
+            List<Page<ScanOrder>> pageList = new ArrayList<>();
+            pageList.add(scanOrders_1);
+            pageList.add(scanOrders_2);
+            pageList.add(scanOrders_4);
+            MessageResult messageResult = MessageResult.success();
+            messageResult.setData(pageList);
+            return messageResult;
+        }else {
+            for (OrderStatus s : OrderStatus.values()) {
+                if (s.getOrdinal() == status) {
+                    statusEnum = s;
+                    break;
+                }
+            }
+            Page<ScanOrder> scanOrders = myOrder(user, statusEnum, pageNo, pageSize, orderSn);
+            MessageResult messageResult = MessageResult.success();
+            messageResult.setData(scanOrders);
+            return messageResult;
+        }
+    }
+
+    /**
      * 我的订单
      *
      * @param
@@ -163,8 +217,7 @@ public class OtcAdvController extends BaseController {
      * @param pageSize
      * @return
      */
-    @RequestMapping(value = "self")
-    public MessageResult myOrder(@SessionAttribute(API_HARD_ID_MEMBER) AuthMember user, OrderStatus status, int pageNo, int pageSize, String orderSn) {
+    public Page<ScanOrder> myOrder(AuthMember user, OrderStatus status, int pageNo, int pageSize, String orderSn) {
         Page<Order> page = orderService.pageQuery(pageNo, pageSize, status, user.getId(), orderSn);
         List<Long> memberIdList = new ArrayList<>();
         page.forEach(order -> {
@@ -186,9 +239,9 @@ public class OtcAdvController extends BaseController {
                 }
             }
         }
-        MessageResult result = MessageResult.success();
-        result.setData(scanOrders);
-        return result;
+//        MessageResult result = MessageResult.success();
+//        result.setData(scanOrders);
+        return scanOrders;
     }
 
     /**
