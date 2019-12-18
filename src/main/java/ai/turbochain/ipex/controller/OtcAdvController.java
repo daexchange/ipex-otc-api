@@ -12,6 +12,7 @@ import java.util.List;
 import ai.turbochain.ipex.constant.*;
 import com.alibaba.druid.sql.ast.statement.SQLIfStatement;
 import org.apache.catalina.servlet4preview.http.HttpServletRequest;
+import org.apache.poi.util.SystemOutLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.util.Assert;
@@ -153,72 +154,103 @@ public class OtcAdvController extends BaseController {
 //        return success(all);
 //    }
 
+//    /**
+//     * 根据订单状态查询我的订单
+//     *
+//     * @param user
+//     * @param status   [ 0：已取消 1：未付款 2：已付款  3：已完成 4：申诉中  5: 进行中 (1、2、4) ]
+//     * @param pageNo
+//     * @param pageSize
+//     * @param orderSn
+//     * @return
+//     */
+//    @RequestMapping(value = "self")
+//    public MessageResult myAPPOrder(@SessionAttribute(API_HARD_ID_MEMBER) AuthMember user, Integer status, int pageNo, int pageSize, String orderSn) {
+//        if (status != 0 && status != 1 && status != 2 && status != 3 && status != 4 && status != 5) {
+//            return MessageResult.error(500, "状态错误");
+//        }
+//
+//        OrderStatus statusEnum = null;
+//        OrderStatus statusEnum_1 = null;
+//        OrderStatus statusEnum_2 = null;
+//        OrderStatus statusEnum_4 = null;
+//        if (status == 5) {
+//            for (OrderStatus s : OrderStatus.values()) {
+//                if (s.getOrdinal() == 1) {
+//                    statusEnum_1 = s;
+//                } else if (s.getOrdinal() == 2) {
+//                    statusEnum_2 = s;
+//                } else if (s.getOrdinal() == 4) {
+//                    statusEnum_4 = s;
+//                }
+//            }
+//            Page<ScanOrder> scanOrders_1 = myOrder(user, statusEnum_1, pageNo, pageSize, orderSn);
+//            Page<ScanOrder> scanOrders_2 = myOrder(user, statusEnum_2, pageNo, pageSize, orderSn);
+//            Page<ScanOrder> scanOrders_4 = myOrder(user, statusEnum_4, pageNo, pageSize, orderSn);
+//            List<Page<ScanOrder>> pageList = new ArrayList<>();
+//            pageList.add(scanOrders_1);
+//            pageList.add(scanOrders_2);
+//            pageList.add(scanOrders_4);
+//            MessageResult messageResult = MessageResult.success();
+//            messageResult.setData(pageList);
+//            return messageResult;
+//        } else {
+//            for (OrderStatus s : OrderStatus.values()) {
+//                if (s.getOrdinal() == status) {
+//                    statusEnum = s;
+//                    break;
+//                }
+//            }
+//            Page<ScanOrder> scanOrders = myOrder(user, statusEnum, pageNo, pageSize, orderSn);
+//            MessageResult messageResult = MessageResult.success();
+//            messageResult.setData(scanOrders);
+//            return messageResult;
+//        }
+//    }
+
     /**
      * 根据订单状态查询我的订单
      *
      * @param user
-     * @param status
-     * [ 0：已取消 1：未付款 2：已付款  3：已完成 4：申诉中  5: 进行中 (1、2、4) ]
+     * @param status   [ 0：已取消 1：未付款 2：已付款  3：已完成 4：申诉中  5: 进行中 (1、2、4) ]
      * @param pageNo
      * @param pageSize
      * @param orderSn
      * @return
      */
     @RequestMapping(value = "self")
-    public MessageResult myAPPOrder(@SessionAttribute(API_HARD_ID_MEMBER) AuthMember user, Integer status, int pageNo, int pageSize, String orderSn){
+    public MessageResult myOrder(@SessionAttribute(API_HARD_ID_MEMBER) AuthMember user, Integer status, int pageNo, int pageSize, String orderSn) {
+
         if (status != 0 && status != 1 && status != 2 && status != 3 && status != 4 && status != 5) {
             return MessageResult.error(500, "状态错误");
         }
+
+        Page<Order> page;
 
         OrderStatus statusEnum = null;
         OrderStatus statusEnum_1 = null;
         OrderStatus statusEnum_2 = null;
         OrderStatus statusEnum_4 = null;
-        if (status==5){
+        if (status == 5) {
             for (OrderStatus s : OrderStatus.values()) {
                 if (s.getOrdinal() == 1) {
                     statusEnum_1 = s;
-                }else if (s.getOrdinal()==2){
+                } else if (s.getOrdinal() == 2) {
                     statusEnum_2 = s;
-                }else if (s.getOrdinal()==4){
+                } else if (s.getOrdinal() == 4) {
                     statusEnum_4 = s;
                 }
             }
-            Page<ScanOrder> scanOrders_1 = myOrder(user, statusEnum_1, pageNo, pageSize, orderSn);
-            Page<ScanOrder> scanOrders_2 = myOrder(user, statusEnum_2, pageNo, pageSize, orderSn);
-            Page<ScanOrder> scanOrders_4 = myOrder(user, statusEnum_4, pageNo, pageSize, orderSn);
-            List<Page<ScanOrder>> pageList = new ArrayList<>();
-            pageList.add(scanOrders_1);
-            pageList.add(scanOrders_2);
-            pageList.add(scanOrders_4);
-            MessageResult messageResult = MessageResult.success();
-            messageResult.setData(pageList);
-            return messageResult;
-        }else {
+            page = orderService.pageQueryApp(pageNo, pageSize, statusEnum_1, statusEnum_2, statusEnum_4, user.getId(), orderSn);
+        } else {
             for (OrderStatus s : OrderStatus.values()) {
                 if (s.getOrdinal() == status) {
                     statusEnum = s;
                     break;
                 }
             }
-            Page<ScanOrder> scanOrders = myOrder(user, statusEnum, pageNo, pageSize, orderSn);
-            MessageResult messageResult = MessageResult.success();
-            messageResult.setData(scanOrders);
-            return messageResult;
+            page = orderService.pageQuery(pageNo, pageSize, statusEnum, user.getId(), orderSn);
         }
-    }
-
-    /**
-     * 我的订单
-     *
-     * @param
-     * @param status
-     * @param pageNo
-     * @param pageSize
-     * @return
-     */
-    public Page<ScanOrder> myOrder(AuthMember user, OrderStatus status, int pageNo, int pageSize, String orderSn) {
-        Page<Order> page = orderService.pageQuery(pageNo, pageSize, status, user.getId(), orderSn);
         List<Long> memberIdList = new ArrayList<>();
         page.forEach(order -> {
             if (!memberIdList.contains(order.getMemberId())) {
@@ -239,9 +271,9 @@ public class OtcAdvController extends BaseController {
                 }
             }
         }
-//        MessageResult result = MessageResult.success();
-//        result.setData(scanOrders);
-        return scanOrders;
+        MessageResult result = MessageResult.success();
+        result.setData(scanOrders);
+        return result;
     }
 
     /**
