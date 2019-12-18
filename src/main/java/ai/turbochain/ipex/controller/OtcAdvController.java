@@ -1,33 +1,51 @@
 package ai.turbochain.ipex.controller;
 
-import ai.turbochain.ipex.coin.CoinExchangeFactory;
-import ai.turbochain.ipex.constant.AdvertiseControlStatus;
-import ai.turbochain.ipex.constant.AdvertiseType;
-import ai.turbochain.ipex.constant.OrderStatus;
-import ai.turbochain.ipex.constant.PageModel;
-import ai.turbochain.ipex.entity.*;
-import ai.turbochain.ipex.entity.transform.*;
-import ai.turbochain.ipex.model.screen.AdvertiseScreen;
-import ai.turbochain.ipex.pagination.PageResult;
-import ai.turbochain.ipex.service.*;
-import ai.turbochain.ipex.util.MessageResult;
-import com.querydsl.core.types.Predicate;
-import com.querydsl.core.types.dsl.BooleanExpression;
-import com.sparkframework.sql.DataException;
-import org.apache.catalina.servlet4preview.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.util.Assert;
-import org.springframework.web.bind.annotation.*;
+import static ai.turbochain.ipex.constant.SysConstant.API_HARD_ID_MEMBER;
+import static org.springframework.util.Assert.notNull;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static ai.turbochain.ipex.constant.SysConstant.API_HARD_ID_MEMBER;
-import static ai.turbochain.ipex.constant.SysConstant.SESSION_MEMBER;
-import static org.springframework.util.Assert.notNull;
+import org.apache.catalina.servlet4preview.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.util.Assert;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.SessionAttribute;
+
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.sparkframework.sql.DataException;
+
+import ai.turbochain.ipex.coin.CoinExchangeFactory;
+import ai.turbochain.ipex.constant.AdvertiseControlStatus;
+import ai.turbochain.ipex.constant.AdvertiseType;
+import ai.turbochain.ipex.constant.OrderStatus;
+import ai.turbochain.ipex.constant.PageModel;
+import ai.turbochain.ipex.entity.Advertise;
+import ai.turbochain.ipex.entity.Member;
+import ai.turbochain.ipex.entity.Order;
+import ai.turbochain.ipex.entity.OrderDetail;
+import ai.turbochain.ipex.entity.OtcCoin;
+import ai.turbochain.ipex.entity.PayInfo;
+import ai.turbochain.ipex.entity.QMember;
+import ai.turbochain.ipex.entity.RespDetail;
+import ai.turbochain.ipex.entity.ScanOrder;
+import ai.turbochain.ipex.entity.transform.AuthMember;
+import ai.turbochain.ipex.entity.transform.MemberAdvertiseInfo;
+import ai.turbochain.ipex.entity.transform.ScanAdvertise;
+import ai.turbochain.ipex.entity.transform.SpecialPage;
+import ai.turbochain.ipex.pagination.PageResult;
+import ai.turbochain.ipex.service.AdvertiseService;
+import ai.turbochain.ipex.service.LocaleMessageSourceService;
+import ai.turbochain.ipex.service.MemberService;
+import ai.turbochain.ipex.service.OrderService;
+import ai.turbochain.ipex.service.OtcCoinService;
+import ai.turbochain.ipex.util.MessageResult;
 
 /**
  * @author 未央
@@ -88,15 +106,21 @@ public class OtcAdvController extends BaseController {
      * @return
      */
     @RequestMapping(value = "all")
-    public MessageResult allNormal(PageModel pageModel, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser, HttpServletRequest request) {
-        BooleanExpression eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).
-                and(QAdvertise.advertise.status.ne(AdvertiseControlStatus.TURNOFF));
-        if (request.getParameter("status") != null) {
-            eq.and(QAdvertise.advertise.status.eq(AdvertiseControlStatus.valueOf(request.getParameter("status"))));
-        }
-        Page<Advertise> all = advertiseService.findAll(eq, pageModel.getPageable());
+    public MessageResult allNormal(PageModel pageModel, AdvertiseControlStatus status,@SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser, HttpServletRequest request) {
+       // BooleanExpression eq = null;
+        
+       // if (status==null) {
+             //eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).and(QAdvertise.advertise.status.eq(AdvertiseControlStatus.TURNOFF));
+       // } else {
+        	//eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).and(QAdvertise.advertise.status.ne(AdvertiseControlStatus.TURNOFF));
+      //  }
+         
+        Page<Advertise> all = advertiseService.pageQuery(pageModel.getPageNo(), pageModel.getPageSize(), status, shiroUser.getId());
+       // Page<Advertise> all = advertiseService.findAll(predicate, pageModel.getPageable());
+
         return success(all);
     }
+
 
     /**
      * 广告详情
