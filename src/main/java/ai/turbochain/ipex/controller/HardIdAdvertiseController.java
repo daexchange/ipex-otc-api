@@ -252,8 +252,11 @@ public class HardIdAdvertiseController extends BaseController {
      */
     @RequestMapping(value = "/on/shelves")
     @Transactional(rollbackFor = Exception.class)
-    public MessageResult putOnShelves(long id, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember authMember) throws InformationExpiredException {
-        Advertise advertise = advertiseService.find(id, authMember.getId());
+    public MessageResult putOnShelves(Long id, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember authMember) throws InformationExpiredException {
+    	if (id==null) {
+            return MessageResult.error("广告ID不能为空");
+        }
+    	Advertise advertise = advertiseService.find(id, authMember.getId());
         Assert.isTrue(advertise != null, msService.getMessage("PUT_ON_SHELVES_FAILED"));
         Assert.isTrue(advertise.getStatus().equals(AdvertiseControlStatus.PUT_OFF_SHELVES), msService.getMessage("PUT_ON_SHELVES_FAILED"));
         OtcCoin otcCoin = advertise.getCoin();
@@ -271,6 +274,94 @@ public class HardIdAdvertiseController extends BaseController {
         advertise.setRemainAmount(advertise.getNumber());
         advertise.setStatus(AdvertiseControlStatus.PUT_ON_SHELVES);
         return MessageResult.success(msService.getMessage("PUT_ON_SHELVES_SUCCESS"));
+    }
+    
+    
+    /**
+     * 修改广告
+     *
+     * @param advertise 广告{@link Advertise}
+     * @return {@link MessageResult}
+     */
+    @RequestMapping(value = "update")
+    @Transactional(rollbackFor = Exception.class)
+    public MessageResult update(
+            @Valid Advertise advertise,
+            BindingResult bindingResult,
+            @SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser,
+            @RequestParam(value = "pay[]") String[] pay, String jyPassword) throws Exception {
+        MessageResult result = BindingResultUtil.validate(bindingResult);
+        if (result != null) {
+            return result;
+        }
+
+        Assert.notEmpty(pay, msService.getMessage("MISSING_PAY"));
+        Assert.notNull(advertise.getId(), msService.getMessage("UPDATE_FAILED"));
+        Assert.hasText(jyPassword, msService.getMessage("MISSING_JYPASSWORD"));
+
+        Member member = memberService.findOne(shiroUser.getId());
+
+        Assert.isTrue(Md5.md5Digest(jyPassword + member.getSalt()).toLowerCase().equals(member.getJyPassword()), msService.getMessage("ERROR_JYPASSWORD"));
+        AdvertiseType advertiseType = advertise.getAdvertiseType();
+
+        StringBuffer payMode = checkPayMode(pay, advertiseType, member);
+
+        advertise.setPayMode(payMode.toString());
+        Advertise old = advertiseService.findOne(advertise.getId());
+        Assert.notNull(old, msService.getMessage("UPDATE_FAILED"));
+        Assert.isTrue(old.getStatus().equals(AdvertiseControlStatus.PUT_OFF_SHELVES), msService.getMessage("AFTER_OFF_SHELVES"));
+        
+        OtcCoin otcCoin = otcCoinService.findOne(old.getCoin().getId());
+        
+        if (otcCoin==null) {
+            return MessageResult.error("币种不存在");
+        }
+        BigDecimal price = advertise.getPrice();
+        if (price==null) {
+            return MessageResult.error("请设置价格");
+        }
+        BigDecimal minLimit = advertise.getMinLimit();
+        if (minLimit==null) {
+            return MessageResult.error("请设置最低单笔交易额");
+        } 
+        BigDecimal maxLimit = advertise.getMaxLimit();
+        if (maxLimit==null) {
+            return MessageResult.error("请设置最高单笔交易额");
+        }
+        BigDecimal number = advertise.getNumber();
+        if (number==null) {
+            return MessageResult.error("请设置交易数量");
+        }
+        
+        checkAmount(old.getAdvertiseType(), advertise, otcCoin, member);
+        Country country = countryService.findOne(advertise.getCountry().getZhName());
+        old.setCountry(country);
+        Advertise ad = advertiseService.modifyAdvertise(advertise, old);
+        if (ad != null) {
+            return MessageResult.success(msService.getMessage("UPDATE_SUCCESS"));
+        } else {
+            return MessageResult.error(msService.getMessage("UPDATE_FAILED"));
+        }
+    }
+    
+    
+    /**
+     * 删除广告
+     *
+     * @param id
+     * @return
+     */
+    @RequestMapping(value = "delete")
+    @Transactional(rollbackFor = Exception.class)
+    public MessageResult delete(Long id, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser) {
+    	if (id==null) {
+            return MessageResult.error("广告ID不能为空");
+        }
+    	Advertise advertise = advertiseService.find(id, shiroUser.getId());
+        Assert.notNull(advertise, msService.getMessage("DELETE_ADVERTISE_FAILED"));
+        Assert.isTrue(advertise.getStatus().equals(AdvertiseControlStatus.PUT_OFF_SHELVES), msService.getMessage("DELETE_AFTER_OFF_SHELVES"));
+        advertise.setStatus(AdvertiseControlStatus.TURNOFF);
+        return MessageResult.success(msService.getMessage("DELETE_ADVERTISE_SUCCESS"));
     }
     
     
@@ -308,71 +399,6 @@ public class HardIdAdvertiseController extends BaseController {
         Predicate predicate = screen.getPredicate(QAdvertise.advertise.member.id.eq(shiroUser.getId()));
         Page<Advertise> all = advertiseService.findAll(predicate, pageModel.getPageable());
         return success(all);
-    }
-
-
-
-    /**
-     * 修改广告
-     *
-     * @param advertise 广告{@link Advertise}
-     * @return {@link MessageResult}
-     */
-    @RequestMapping(value = "update")
-    @Transactional(rollbackFor = Exception.class)
-    public MessageResult update(
-            @Valid Advertise advertise,
-            BindingResult bindingResult,
-            @SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser,
-            @RequestParam(value = "pay[]") String[] pay, String jyPassword) throws Exception {
-        MessageResult result = BindingResultUtil.validate(bindingResult);
-        if (result != null) {
-            return result;
-        }
-
-        Assert.notEmpty(pay, msService.getMessage("MISSING_PAY"));
-        Assert.notNull(advertise.getId(), msService.getMessage("UPDATE_FAILED"));
-        Assert.hasText(jyPassword, msService.getMessage("MISSING_JYPASSWORD"));
-
-        Member member = memberService.findOne(shiroUser.getId());
-
-        Assert.isTrue(Md5.md5Digest(jyPassword + member.getSalt()).toLowerCase().equals(member.getJyPassword()), msService.getMessage("ERROR_JYPASSWORD"));
-        AdvertiseType advertiseType = advertise.getAdvertiseType();
-
-        StringBuffer payMode = checkPayMode(pay, advertiseType, member);
-
-        advertise.setPayMode(payMode.toString());
-        Advertise old = advertiseService.findOne(advertise.getId());
-        Assert.notNull(old, msService.getMessage("UPDATE_FAILED"));
-        Assert.isTrue(old.getStatus().equals(AdvertiseControlStatus.PUT_OFF_SHELVES), msService.getMessage("AFTER_OFF_SHELVES"));
-        OtcCoin otcCoin = otcCoinService.findOne(old.getCoin().getId());
-        checkAmount(old.getAdvertiseType(), advertise, otcCoin, member);
-        Country country = countryService.findOne(advertise.getCountry().getZhName());
-        old.setCountry(country);
-        Advertise ad = advertiseService.modifyAdvertise(advertise, old);
-        if (ad != null) {
-            return MessageResult.success(msService.getMessage("UPDATE_SUCCESS"));
-        } else {
-            return MessageResult.error(msService.getMessage("UPDATE_FAILED"));
-        }
-    }
-   
-
-
-    /**
-     * 删除广告
-     *
-     * @param id
-     * @return
-     */
-    @RequestMapping(value = "delete")
-    @Transactional(rollbackFor = Exception.class)
-    public MessageResult delete(Long id, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser) {
-        Advertise advertise = advertiseService.find(id, shiroUser.getId());
-        Assert.notNull(advertise, msService.getMessage("DELETE_ADVERTISE_FAILED"));
-        Assert.isTrue(advertise.getStatus().equals(AdvertiseControlStatus.PUT_OFF_SHELVES), msService.getMessage("DELETE_AFTER_OFF_SHELVES"));
-        advertise.setStatus(AdvertiseControlStatus.TURNOFF);
-        return MessageResult.success(msService.getMessage("DELETE_ADVERTISE_SUCCESS"));
     }
 
 
