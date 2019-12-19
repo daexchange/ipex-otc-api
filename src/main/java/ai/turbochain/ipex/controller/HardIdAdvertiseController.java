@@ -150,11 +150,12 @@ public class HardIdAdvertiseController extends BaseController {
         }
         
         checkAmount(advertiseType, advertise, otcCoin, member1);
-        advertise.setLevel(AdvertiseLevel.ORDINARY);
-        advertise.setRemainAmount(advertise.getNumber());
+        
         Member mb = new Member();
         mb.setId(user.getId());
+        
         advertise.setMember(mb);
+        advertise.setLevel(AdvertiseLevel.ORDINARY);
         advertise.setOrigin(MemberRegisterOriginEnum.HARDID.getSourceType());//代表来自应用HardId
         // 直接上架
         advertise.setStatus(AdvertiseControlStatus.PUT_ON_SHELVES);

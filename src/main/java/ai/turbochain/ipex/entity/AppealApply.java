@@ -15,4 +15,5 @@ public class AppealApply {
     private String orderSn;
     @NotBlank(message = "申诉原因不能为空")
     private String remark;
+    private String image[];
 }

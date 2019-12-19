@@ -15,6 +15,7 @@ import static ai.turbochain.ipex.util.BigDecimalUtils.isEqual;
 import static ai.turbochain.ipex.util.BigDecimalUtils.mulRound;
 import static ai.turbochain.ipex.util.BigDecimalUtils.rate;
 import static ai.turbochain.ipex.util.BigDecimalUtils.sub;
+import static ai.turbochain.ipex.util.MessageResult.success;
 import static org.springframework.util.Assert.isTrue;
 import static org.springframework.util.Assert.notNull;
 
@@ -23,10 +24,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.validation.Valid;
 
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -107,9 +112,6 @@ public class HardIdOrderController {
     @Autowired
     private MemberLegalCurrencyWalletService memberLegalCurrencyWalletService;
    
-  //  @Autowired
-   // private MemberWalletService memberWalletService;
-
     @Autowired
     private CoinExchangeFactory coins;
 
@@ -128,7 +130,6 @@ public class HardIdOrderController {
     @Autowired
     private MemberTransactionService memberTransactionService;
 
-
     @Value("${spark.system.order.sms:1}")
     private int notice;
 
@@ -139,7 +140,8 @@ public class HardIdOrderController {
     private MongoTemplate mongoTemplate ;
     @Autowired
     private ESUtils esUtils;
-
+    
+    public static final Integer Advertise_ORDER_TimeLimit = 30;
 
     /**
      * 买入，卖出详细信息
@@ -278,7 +280,9 @@ public class HardIdOrderController {
         order.setPayMode(advertise.getPayMode());
         order.setPrice(price);
         order.setRemark(remark);
-        order.setTimeLimit(advertise.getTimeLimit());
+        //order.setTimeLimit(advertise.getTimeLimit());
+        order.setTimeLimit(Advertise_ORDER_TimeLimit);
+        
         Arrays.stream(pay).forEach(x -> {
             if (ALI.getCnName().equals(x)) {
                 order.setAlipay(advertise.getMember().getAlipay());
@@ -413,7 +417,9 @@ public class HardIdOrderController {
         order.setPayMode(advertise.getPayMode());
         order.setPrice(price);
         order.setRemark(remark);
-        order.setTimeLimit(advertise.getTimeLimit());
+        //order.setTimeLimit(advertise.getTimeLimit());
+        order.setTimeLimit(Advertise_ORDER_TimeLimit);
+        
         String[] pay = advertise.getPayMode().split(",");
         MessageResult result = MessageResult.error(msService.getMessage("CREATE_ORDER_SUCCESS"));
         Arrays.stream(pay).forEach(x -> {
@@ -768,6 +774,7 @@ public class HardIdOrderController {
         return MessageResult.success(msService.getMessage("RELEASE_SUCCESS"));
     }
 
+    
     /**
      * 申诉
      *
@@ -803,6 +810,10 @@ public class HardIdOrderController {
         } else {
             appeal.setAssociateId(order.getMemberId());
         }
+        String [] image = appealApply.getImage();
+        if (image!=null) {
+        	appeal.setImages(ArrayUtils.toString(image, ","));;
+        }
         appeal.setOrder(order);
         appeal.setRemark(appealApply.getRemark());
         Appeal appeal1 = appealService.save(appeal);
@@ -812,4 +823,64 @@ public class HardIdOrderController {
             throw new InformationExpiredException("Information Expired");
         }
     }
+    
+    
+    /**
+     * 申诉内容详情
+     *
+     * @param appealApply
+     * @param bindingResult
+     * @param user
+     * @return
+     * @throws InformationExpiredException
+     */
+    @RequestMapping(value = "/appeal/detail")
+    @Transactional(rollbackFor = Exception.class)
+    public MessageResult appealDetail(String orderSn, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember user) throws InformationExpiredException {
+        
+        if (StringUtils.isBlank(orderSn)) {
+          return MessageResult.error("订单号不能为空");
+        }
+        
+        Order order = orderService.findOneByOrderSn(orderSn);
+        if (order==null) {
+        	return MessageResult.error("该订单已被删除");
+        }
+        
+        List<Appeal> list = appealService.findByOrder(order);
+        
+        for (Appeal appeal : list) {
+        	Map<String,Object> map = new HashMap<String,Object>();
+        	
+        	 /**
+             * 申诉发起者id
+             */
+             Long initiatorId = appeal.getInitiatorId();
+             Member initiatorMember = memberService.findOne(initiatorId);
+            
+             map.put("initiatorMember", initiatorMember);
+        	
+            /**
+             * 申诉关联者id
+             */
+             Long associateId = appeal.getAssociateId();
+             
+             Member associateMember = memberService.findOne(associateId);
+             
+             map.put("associateMember", associateMember);
+             map.put("id", appeal.getId());
+             map.put("remark", appeal.getRemark());
+             map.put("createTime", appeal.getCreateTime());
+             map.put("dealWithTime", appeal.getDealWithTime());
+             map.put("images", appeal.getImages());
+             map.put("status", appeal.getStatus());
+        }
+        
+        MessageResult  result = success();
+        
+        result.setData(list);
+        
+        return result;
+    }
+    
 }
