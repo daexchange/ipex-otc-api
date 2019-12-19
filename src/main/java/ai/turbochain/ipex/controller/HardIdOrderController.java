@@ -847,9 +847,9 @@ public class HardIdOrderController {
         	return MessageResult.error("该订单已被删除");
         }
         
-        List<Appeal> list = appealService.findByOrder(order);
-        
-        for (Appeal appeal : list) {
+        List<Appeal> appealList = appealService.findByOrder(order);
+        List<Map<String,Object>> list = new ArrayList<Map<String,Object>>();
+        for (Appeal appeal : appealList) {
         	Map<String,Object> map = new HashMap<String,Object>();
         	
         	 /**
@@ -874,6 +874,9 @@ public class HardIdOrderController {
              map.put("dealWithTime", appeal.getDealWithTime());
              map.put("images", appeal.getImages());
              map.put("status", appeal.getStatus());
+             map.put("isSuccess", appeal.getIsSuccess());
+             
+             list.add(map);
         }
         
         MessageResult  result = success();
