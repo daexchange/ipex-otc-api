@@ -8,61 +8,40 @@ import static ai.turbochain.ipex.constant.SysConstant.API_HARD_ID_MEMBER;
 import static ai.turbochain.ipex.util.BigDecimalUtils.compare;
 
 import java.math.BigDecimal;
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import javax.validation.Valid;
 
-import org.apache.catalina.servlet4preview.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.SessionAttribute;
-
-import com.querydsl.core.types.Predicate;
-import com.querydsl.core.types.dsl.BooleanExpression;
-import com.sparkframework.sql.DataException;
 
 import ai.turbochain.ipex.coin.CoinExchangeFactory;
 import ai.turbochain.ipex.constant.AdvertiseControlStatus;
 import ai.turbochain.ipex.constant.AdvertiseLevel;
 import ai.turbochain.ipex.constant.AdvertiseType;
-import ai.turbochain.ipex.constant.MemberLevelEnum;
 import ai.turbochain.ipex.constant.MemberRegisterOriginEnum;
-import ai.turbochain.ipex.constant.PageModel;
 import ai.turbochain.ipex.constant.PriceType;
 import ai.turbochain.ipex.entity.Advertise;
 import ai.turbochain.ipex.entity.Country;
 import ai.turbochain.ipex.entity.Member;
 import ai.turbochain.ipex.entity.MemberLegalCurrencyWallet;
 import ai.turbochain.ipex.entity.OtcCoin;
-import ai.turbochain.ipex.entity.QAdvertise;
 import ai.turbochain.ipex.entity.transform.AuthMember;
 import ai.turbochain.ipex.entity.transform.MemberAdvertiseDetail;
-import ai.turbochain.ipex.entity.transform.MemberAdvertiseInfo;
-import ai.turbochain.ipex.entity.transform.ScanAdvertise;
-import ai.turbochain.ipex.entity.transform.Special;
-import ai.turbochain.ipex.entity.transform.SpecialPage;
 import ai.turbochain.ipex.exception.InformationExpiredException;
-import ai.turbochain.ipex.model.screen.AdvertiseScreen;
 import ai.turbochain.ipex.service.AdvertiseService;
 import ai.turbochain.ipex.service.CountryService;
 import ai.turbochain.ipex.service.LocaleMessageSourceService;
 import ai.turbochain.ipex.service.MemberLegalCurrencyWalletService;
 import ai.turbochain.ipex.service.MemberService;
 import ai.turbochain.ipex.service.OtcCoinService;
-import ai.turbochain.ipex.util.BigDecimalUtils;
 import ai.turbochain.ipex.util.BindingResultUtil;
 import ai.turbochain.ipex.util.Md5;
 import ai.turbochain.ipex.util.MessageResult;
@@ -365,112 +344,6 @@ public class HardIdAdvertiseController extends BaseController {
         return MessageResult.success(msService.getMessage("DELETE_ADVERTISE_SUCCESS"));
     }
     
-    
-    /**
-     * 个人所有广告
-     *
-     * @param shiroUser
-     * @return
-     */
-    @RequestMapping(value = "all")
-    public MessageResult allNormal(
-            PageModel pageModel,
-            @SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser, HttpServletRequest request) {
-        BooleanExpression eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).
-                and(QAdvertise.advertise.status.ne(AdvertiseControlStatus.TURNOFF));;
-        if(request.getParameter("status") != null){
-            eq.and(QAdvertise.advertise.status.eq(AdvertiseControlStatus.valueOf(request.getParameter("status"))));
-        }
-        Page<Advertise> all = advertiseService.findAll(eq, pageModel.getPageable());
-        return success(all);
-    }
-
-    /**
-     * 个人所有广告
-     *
-     * @param
-     * @return
-     */
-    @RequestMapping(value = "self/all")
-    public MessageResult self(
-            AdvertiseScreen screen,
-            PageModel pageModel,
-            @SessionAttribute(API_HARD_ID_MEMBER) AuthMember shiroUser) {
-        //添加 指定用户条件
-        Predicate predicate = screen.getPredicate(QAdvertise.advertise.member.id.eq(shiroUser.getId()));
-        Page<Advertise> all = advertiseService.findAll(predicate, pageModel.getPageable());
-        return success(all);
-    }
-
-
-    /**
-     * 查询优质广告
-     *
-     * @return
-     */
-    @RequestMapping(value = "excellent")
-    public MessageResult allExcellentAdvertise(AdvertiseType advertiseType) throws Exception {
-        List<Map<String, String>> marketPrices = new ArrayList<>();
-        List<Map<String, String>> otcCoins = otcCoinService.getAllNormalCoin();
-        otcCoins.stream().forEachOrdered(x -> {
-            Map<String, String> map = new HashMap<>(2);
-            map.put("name", x.get("unit"));
-            map.put("price", coins.get(x.get("unit")).toString());
-            marketPrices.add(map);
-        });
-        List<ScanAdvertise> list = advertiseService.getAllExcellentAdvertise(advertiseType, marketPrices);
-        MessageResult messageResult = MessageResult.success();
-        messageResult.setData(list);
-        return messageResult;
-    }
-
-    /**
-     * 分页查询广告
-     *
-     * @param pageNo
-     * @param pageSize
-     * @return
-     */
-    @RequestMapping(value = "page")
-    public MessageResult queryPageAdvertise(@RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
-                                            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
-                                            Long id, AdvertiseType advertiseType,
-                                            @RequestParam(value = "isCertified", defaultValue = "0") Integer isCertified) throws SQLException, DataException {
-        OtcCoin otcCoin = otcCoinService.findOne(id);
-        double marketPrice = coins.get(otcCoin.getUnit()).doubleValue();
-        SpecialPage<ScanAdvertise> page = advertiseService.paginationAdvertise(pageNo, pageSize, otcCoin, advertiseType, marketPrice, isCertified);
-        MessageResult messageResult = MessageResult.success();
-        messageResult.setData(page);
-        return messageResult;
-    }
-
-    @RequestMapping(value = "page-by-unit")
-    public MessageResult queryPageAdvertiseByUnit(@RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
-                                                  @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
-                                                  String unit, AdvertiseType advertiseType,
-                                                  @RequestParam(value = "isCertified", defaultValue = "0") Integer isCertified) throws SQLException, DataException {
-        OtcCoin otcCoin = otcCoinService.findByUnit(unit);
-        Assert.notNull(otcCoin, "validate otcCoin unit!");
-        double marketPrice = coins.get(otcCoin.getUnit()).doubleValue();
-        SpecialPage<ScanAdvertise> page = advertiseService.paginationAdvertise(pageNo, pageSize, otcCoin, advertiseType, marketPrice, isCertified);
-        MessageResult messageResult = MessageResult.success();
-        messageResult.setData(page);
-        return messageResult;
-    }
-
-    @RequestMapping(value = "member", method = RequestMethod.POST)
-    public MessageResult memberAdvertises(String name) {
-        Member member = memberService.findByUsername(name);
-        if (member != null) {
-            MemberAdvertiseInfo memberAdvertise = advertiseService.getMemberAdvertise(member, coins.getCoins());
-            MessageResult result = MessageResult.success();
-            result.setData(memberAdvertise);
-            return result;
-        } else {
-            return MessageResult.error(msService.getMessage("MEMBER_NOT_EXISTS"));
-        }
-    }
-
     private StringBuffer checkPayMode(String[] pay, AdvertiseType advertiseType, Member member) {
         StringBuffer payMode = new StringBuffer();
         Arrays.stream(pay).forEach(x -> {
@@ -500,39 +373,5 @@ public class HardIdAdvertiseController extends BaseController {
         }
     }
 
-    /**
-     * 查询最新十条广告
-     * TODO 查询提速
-     */
-    @RequestMapping(value = "newest")
-    public MessageResult queryNewest() throws Exception {
-        Special<ScanAdvertise> list = advertiseService.getLatestAdvertise();
-        OtcCoin otcCoin;
-        double finalPrice;
-
-        //空指针
-        if(list==null|| list.getContext() ==null) {
-            return success("data null!");
-        }
-
-        for (ScanAdvertise adv : list.getContext()) {
-            if(null != adv){
-                otcCoin = otcCoinService.findOne(adv.getCoinId());
-                if(null == otcCoin){
-                    continue;
-                }
-                finalPrice = coins.get(otcCoin.getUnit()).doubleValue();
-                if(null != adv.getPremiseRate()){
-                    //pricetype = 0 ? price : 计算价格
-                    adv.setPrice(BigDecimalUtils.round(((adv.getPremiseRate().doubleValue() + 100) / 100) * finalPrice,2));
-                }
-                adv.setUnit(otcCoin.getUnit());
-                adv.setCoinName(otcCoin.getName());
-                adv.setCoinNameCn(otcCoin.getNameCn());
-            }
-        }
-        MessageResult messageResult = MessageResult.success();
-        messageResult.setData(list);
-        return messageResult;
-    }
+   
 }
