@@ -198,6 +198,7 @@ public class OtcAdvController extends BaseController {
             for (Member member : memberPage.getContent()) {
                 if (scanOrder.getMemberId().equals(member.getId())) {
                     scanOrder.setAvatar(member.getAvatar());
+                    scanOrder.setNickName(member.getNickName());
                 }
             }
         }

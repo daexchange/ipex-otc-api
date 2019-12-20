@@ -31,6 +31,7 @@ public class ScanOrder {
     private OrderStatus status;
     private Long memberId;
     private String avatar;
+    private String nickName;
 
     public static ScanOrder toScanOrder(Order order, Long id) {
         return ScanOrder.builder().orderSn(order.getOrderSn())
