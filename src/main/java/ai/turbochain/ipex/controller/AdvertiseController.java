@@ -38,6 +38,7 @@ import ai.turbochain.ipex.constant.AdvertiseControlStatus;
 import ai.turbochain.ipex.constant.AdvertiseLevel;
 import ai.turbochain.ipex.constant.AdvertiseType;
 import ai.turbochain.ipex.constant.MemberLevelEnum;
+import ai.turbochain.ipex.constant.MemberRegisterOriginEnum;
 import ai.turbochain.ipex.constant.PageModel;
 import ai.turbochain.ipex.entity.Advertise;
 import ai.turbochain.ipex.entity.Country;
@@ -91,7 +92,6 @@ public class AdvertiseController extends BaseController {
     private CountryService countryService;
     @Value("${spark.system.advertise:1}")
     private int allow;
-
 
     /**
      * 创建广告
@@ -148,10 +148,13 @@ public class AdvertiseController extends BaseController {
             PageModel pageModel,
             @SessionAttribute(SESSION_MEMBER) AuthMember shiroUser, HttpServletRequest request) {
         BooleanExpression eq = QAdvertise.advertise.member.id.eq(shiroUser.getId()).
-                and(QAdvertise.advertise.status.ne(AdvertiseControlStatus.TURNOFF));;
+                and(QAdvertise.advertise.status.ne(AdvertiseControlStatus.TURNOFF)).
+                and(QAdvertise.advertise.origin.eq(MemberRegisterOriginEnum.IPEX.getSourceType()));
+        
         if(request.getParameter("status") != null){
             eq.and(QAdvertise.advertise.status.eq(AdvertiseControlStatus.valueOf(request.getParameter("status"))));
         }
+        
         Page<Advertise> all = advertiseService.findAll(eq, pageModel.getPageable());
         return success(all);
     }
@@ -346,7 +349,7 @@ public class AdvertiseController extends BaseController {
                                             @RequestParam(value = "isCertified", defaultValue = "0") Integer isCertified) throws SQLException, DataException {
         OtcCoin otcCoin = otcCoinService.findOne(id);
         double marketPrice = coins.get(otcCoin.getUnit()).doubleValue();
-        SpecialPage<ScanAdvertise> page = advertiseService.paginationAdvertise(pageNo, pageSize, otcCoin, advertiseType, marketPrice, isCertified);
+        SpecialPage<ScanAdvertise> page = advertiseService.paginationAdvertise(pageNo, pageSize, otcCoin, advertiseType, marketPrice, isCertified,MemberRegisterOriginEnum.IPEX.getSourceType());
         MessageResult messageResult = MessageResult.success();
         messageResult.setData(page);
         return messageResult;
@@ -360,7 +363,7 @@ public class AdvertiseController extends BaseController {
         OtcCoin otcCoin = otcCoinService.findByUnit(unit);
         Assert.notNull(otcCoin, "validate otcCoin unit!");
         double marketPrice = coins.get(otcCoin.getUnit()).doubleValue();
-        SpecialPage<ScanAdvertise> page = advertiseService.paginationAdvertise(pageNo, pageSize, otcCoin, advertiseType, marketPrice, isCertified);
+        SpecialPage<ScanAdvertise> page = advertiseService.paginationAdvertise(pageNo, pageSize, otcCoin, advertiseType, marketPrice, isCertified,MemberRegisterOriginEnum.IPEX.getSourceType());
         MessageResult messageResult = MessageResult.success();
         messageResult.setData(page);
         return messageResult;

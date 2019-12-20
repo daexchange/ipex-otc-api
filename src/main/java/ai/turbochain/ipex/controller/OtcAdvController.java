@@ -1,7 +1,6 @@
 package ai.turbochain.ipex.controller;
 
 import static ai.turbochain.ipex.constant.SysConstant.API_HARD_ID_MEMBER;
-import static ai.turbochain.ipex.constant.SysConstant.SESSION_MEMBER;
 import static org.springframework.util.Assert.notNull;
 
 import java.math.BigDecimal;
@@ -9,10 +8,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import ai.turbochain.ipex.constant.*;
-import com.alibaba.druid.sql.ast.statement.SQLIfStatement;
 import org.apache.catalina.servlet4preview.http.HttpServletRequest;
-import org.apache.poi.util.SystemOutLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.util.Assert;
@@ -26,6 +22,11 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.sparkframework.sql.DataException;
 
 import ai.turbochain.ipex.coin.CoinExchangeFactory;
+import ai.turbochain.ipex.constant.AdvertiseControlStatus;
+import ai.turbochain.ipex.constant.AdvertiseType;
+import ai.turbochain.ipex.constant.MemberRegisterOriginEnum;
+import ai.turbochain.ipex.constant.OrderStatus;
+import ai.turbochain.ipex.constant.PageModel;
 import ai.turbochain.ipex.entity.Advertise;
 import ai.turbochain.ipex.entity.Member;
 import ai.turbochain.ipex.entity.Order;
@@ -72,7 +73,7 @@ public class OtcAdvController extends BaseController {
 
     @Autowired
     private CoinExchangeFactory coins;
-
+    
     /**
      * 法币交易广告查询
      *
@@ -93,7 +94,8 @@ public class OtcAdvController extends BaseController {
         OtcCoin otcCoin = otcCoinService.findByUnit(unit);
         Assert.notNull(otcCoin, "validate otcCoin unit!");
         double marketPrice = coins.get(otcCoin.getUnit()).doubleValue();
-        SpecialPage<ScanAdvertise> page = advertiseService.paginationAdvertise(pageNo, pageSize, otcCoin, advertiseType, marketPrice, isCertified);
+       
+        SpecialPage<ScanAdvertise> page = advertiseService.paginationAdvertise(pageNo, pageSize, otcCoin, advertiseType, marketPrice, isCertified,MemberRegisterOriginEnum.HARDID.getSourceType());
         MessageResult messageResult = MessageResult.success();
         messageResult.setData(page);
         return messageResult;
