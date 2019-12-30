@@ -236,6 +236,7 @@ public class OtcAdvController extends BaseController {
                 .price(order.getPrice())
                 .money(order.getMoney())
                 .payTime(order.getPayTime())
+                .payType(order.getPayType())
                 .createTime(order.getCreateTime())
                 .timeLimit(order.getTimeLimit())
                 .myId(user.getId()).memberMobile(member.getMobilePhone())

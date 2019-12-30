@@ -34,4 +34,5 @@ public class OrderDetail {
     private long myId;
     private long hisId;
     private String memberMobile;
+    private Integer payType;
 }

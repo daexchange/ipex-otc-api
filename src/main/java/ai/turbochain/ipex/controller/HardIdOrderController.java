@@ -731,8 +731,12 @@ public class HardIdOrderController {
 	 */
 	@RequestMapping(value = "pay")
 	@Transactional(rollbackFor = Exception.class)
-	public MessageResult payOrder(String orderSn, @SessionAttribute(API_HARD_ID_MEMBER) AuthMember user)
+	public MessageResult payOrder(String orderSn, Integer payType,@SessionAttribute(API_HARD_ID_MEMBER) AuthMember user)
 			throws InformationExpiredException {
+		if (payType == null) {
+			return MessageResult.error("请设置付款方式");
+		}
+
 		Order order = orderService.findOneByOrderSn(orderSn);
 		notNull(order, msService.getMessage("ORDER_NOT_EXISTS"));
 		int ret = 0;Long otherUserId = null;
@@ -750,6 +754,7 @@ public class HardIdOrderController {
 		
 		int is = orderService.payForOrder(orderSn);
 		order.setStatus(OrderStatus.PAID);
+		order.setPayType(payType);
 		
 		if (is > 0) {
 			/**
@@ -1011,5 +1016,5 @@ public class HardIdOrderController {
 
 		return result;
 	}
-
+ 
 }
